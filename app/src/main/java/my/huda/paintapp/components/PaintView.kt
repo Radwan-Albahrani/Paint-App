@@ -15,8 +15,6 @@ import kotlin.math.max
 import kotlin.math.min
 
 class PaintView : View {
-
-    private var params : ViewGroup.LayoutParams? = null
     private var scaleGestureDetector: ScaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
     private var scaleFactor = 1.0f
     private var lastTouchX = 0f
@@ -48,15 +46,13 @@ class PaintView : View {
         paintBrush.style = Paint.Style.STROKE
         paintBrush.strokeJoin = Paint.Join.ROUND
         paintBrush.strokeWidth = currentStroke
-
-        params = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 
     override fun onDraw(canvas: Canvas) {
         // Scale the canvas based on the current scale factor
         canvas.save()
-        canvas.scale(scaleFactor, scaleFactor)
         canvas.translate(translateX, translateY)
+        canvas.scale(scaleFactor, scaleFactor)
         for (currentPathIndex in pathList.indices) {
             paintBrush.color = colorList[currentPathIndex]
             paintBrush.strokeWidth = strokeList[currentPathIndex]
@@ -76,9 +72,6 @@ class PaintView : View {
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                if(event.pointerCount >= 2){
-                    return true
-                }
                 lastTouchX = event.x
                 lastTouchY = event.y
                 path.moveTo(touchX, touchY)
