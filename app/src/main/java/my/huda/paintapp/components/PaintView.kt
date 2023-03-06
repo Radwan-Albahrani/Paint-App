@@ -11,10 +11,7 @@ import my.huda.paintapp.screens.MainScreen.Companion.eraserMode
 import my.huda.paintapp.screens.MainScreen.Companion.paintBrush
 import my.huda.paintapp.screens.MainScreen.Companion.path
 import my.huda.paintapp.screens.MainScreen.Companion.selectMode
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.atan2
-import kotlin.math.sqrt
+import kotlin.math.*
 
 class PaintView : View {
     private var scaleGestureDetector: ScaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
@@ -31,6 +28,8 @@ class PaintView : View {
     private var selectedPathBounds = RectF()
     private var selectedPathPaint = Paint()
     private var isScaling = false
+    private var scalingCount = 0
+    private val scaleFactorObject = 1.001f
 
 
     companion object{
@@ -152,10 +151,7 @@ class PaintView : View {
                     selectModeMove(touchX, touchY, selectedPath)
                 }
                 2 -> {
-                    selectModeScale(event, selectedPath, centerX, centerY)
-                }
-                3 -> {
-                    selectModeRotate(event, selectedPath, centerX, centerY)
+                    selectModeScaleAndRotate(event, selectedPath, centerX, centerY)
                 }
             }
             invalidate()
@@ -217,7 +213,7 @@ class PaintView : View {
                 if (bounds.contains(touchX, touchY)) {
                     // Found a path, store the initial touch point and select it
                     selectedPathIndex = i
-                    bounds.inset(-bounds.width() / 4, -bounds.height() / 4)
+                    bounds.inset(-bounds.width() / 6, -bounds.height() / 6)
                     selectedPathBounds = bounds
                     initialTouchX = touchX
                     initialTouchY = touchY
@@ -240,38 +236,7 @@ class PaintView : View {
         return false
     }
 
-    private fun selectModeRotate(
-        event: MotionEvent,
-        selectedPath: Path,
-        centerX: Float,
-        centerY: Float
-    ) {
-        // angle between the three fingers
-        val angle = PointF(event.getX(0), event.getY(0)).angleTo(
-            PointF(event.getX(1), event.getY(1)),
-            PointF(event.getX(2), event.getY(2))
-        )
-
-        // angle between the initial three fingers
-        val initialAngle = PointF(initialTouchX, initialTouchY).angleTo(
-            PointF(event.getX(1), event.getY(1)),
-            PointF(event.getX(2), event.getY(2))
-        )
-
-        // rotate the path
-        selectedPath.transform(Matrix().apply {
-            postTranslate(-centerX, -centerY)
-            postRotate(angle - initialAngle)
-            postTranslate(centerX, centerY)
-        })
-        selectedPathBounds.transform(Matrix().apply {
-            postTranslate(-centerX, -centerY)
-            postRotate(angle - initialAngle)
-            postTranslate(centerX, centerY)
-        })
-    }
-
-    private fun selectModeScale(
+    private fun selectModeScaleAndRotate(
         event: MotionEvent,
         selectedPath: Path,
         centerX: Float,
@@ -282,24 +247,67 @@ class PaintView : View {
             PointF(event.getX(1), event.getY(1))
         )
 
+        // angle between the two fingers
+        val angle = PointF(event.getX(0), event.getY(0)).angleTo(
+            PointF(event.getX(1), event.getY(1))
+        )
+
         // initial distance between two fingers
         val initialDistance = PointF(initialTouchX, initialTouchY).distanceTo(
             PointF(event.getX(1), event.getY(1))
         )
 
-        // scale the path
-        val scale = (distance / initialDistance) / scaleFactor
+        // initial angle between the two fingers
+        val initialAngle = PointF(initialTouchX, initialTouchY).angleTo(
+            PointF(event.getX(1), event.getY(1))
+        )
+        if(initialDistance > distance)
+        {
+            if(scalingCount > 0)
+            {
+                scalingCount = 0
+            }
+            if(scalingCount <= -50)
+            {
+                scalingCount = -50
+            }
+            // fingers are moving away from each other
+            scalingCount--
+            println("Zooming Out: $scalingCount")
+            println(initialDistance)
+            println(distance)
+        }
+        else
+        {
+            // fingers are moving closer to each other
+            if(scalingCount < 0)
+            {
+                scalingCount = 0
+            }
+            if (scalingCount >= 50)
+            {
+                scalingCount = 50
+            }
+            scalingCount++
+            println("Zooming in: $scalingCount")
+        }
+
+        val scale = (scaleFactorObject.pow(scalingCount))
+
+        // scale and rotate the path
         selectedPath.transform(Matrix().apply {
             postTranslate(-centerX, -centerY)
             postScale(scale, scale)
+            postRotate(angle - initialAngle, distance / 2, 0f)
             postTranslate(centerX, centerY)
         })
-        selectedPathBounds.transform(Matrix().apply {
-            postTranslate(-centerX, -centerY)
-            postScale(scale, scale)
-            postTranslate(centerX, centerY)
-        })
+        val bounds = RectF()
+        pathList[selectedPathIndex].computeBounds(bounds, false)
+        bounds.inset(-bounds.width() / 6, -bounds.height() / 6)
+        selectedPathBounds = bounds
+
     }
+
 
     private fun selectModeMove(
         touchX: Float,
@@ -343,9 +351,9 @@ class PaintView : View {
     }
 }
 
-fun PointF.angleTo(p1: PointF, p2: PointF): Float {
-    val angle1 = atan2(p1.y - y, p1.x - x)
-    val angle2 = atan2(p2.y - y, p2.x - x)
+fun PointF.angleTo(p: PointF): Float {
+    val angle1 = atan2(y, x)
+    val angle2 = atan2(p.y - y, p.x - x)
     return angle2 - angle1
 }
 
