@@ -58,14 +58,15 @@ class MainScreen : AppCompatActivity() {
         val colorClickList = listOf(blackColorClick, brownColorClick, orangeColorClick, yellowColorClick, greenColorClick, blueColorClick, purpleColorClick)
 
         for(colorClick in colorClickList){
+            val density = resources.displayMetrics.density
             colorClick.setOnClickListener {
                 for(color in colorList){
                     if(color.parent != colorClick)
                     {
-                        color.setSize(105, 32)
+                        color.setSize((30 * density).toInt(), 32)
                     }
                     else {
-                        color.setSize(150, 9)
+                        color.setSize((42 * density).toInt(), 9)
                         paintBrush.color = color.getColor()
                         selectedColor = color.getColor()
                         currentBrush = color.getColor()
@@ -144,16 +145,17 @@ class MainScreen : AppCompatActivity() {
     }
 
     private fun extendPanel(panel: FrameLayout, paintTools: View, strokeTools: View, colorTools: View){
+        val density = resources.displayMetrics.density
         if (!isExtended) {
             isExtended = true
-            panel.layoutParams.height = 650
+            panel.layoutParams.height = (200 * density).toInt()
             paintTools.visibility = View.VISIBLE
             strokeTools.visibility = View.VISIBLE
             colorTools.visibility = View.VISIBLE
 
         }
         else {
-            panel.layoutParams.height = 350
+            panel.layoutParams.height = (100 * density).toInt()
             paintTools.visibility = View.VISIBLE
             strokeTools.visibility = View.GONE
             colorTools.visibility = View.GONE
