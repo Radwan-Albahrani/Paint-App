@@ -28,6 +28,7 @@ class PaintView : View {
     private var initialTouchY = 0f
     private var selectedPathBounds = RectF()
     private var selectedPathPaint = Paint()
+    private var isScaling = false
 
 
     companion object{
@@ -94,7 +95,10 @@ class PaintView : View {
         {
             scaleGestureDetector.onTouchEvent(event)
         }
-
+        if(isScaling)
+        {
+            return true
+        }
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 return onTouchDown(event, touchX, touchY)
@@ -151,7 +155,7 @@ class PaintView : View {
             invalidate()
             return true
         }
-        if (event.pointerCount == 2 && !selectMode) {
+        if (event.pointerCount == 2 && !selectMode && !isScaling){
             // Two-finger gesture: translate the canvas
             val dx = event.x - lastTouchX
             val dy = event.y - lastTouchY
@@ -278,7 +282,7 @@ class PaintView : View {
         )
 
         // scale the path
-        val scale = (distance / initialDistance)
+        val scale = (distance / initialDistance) / scaleFactor
         selectedPath.transform(Matrix().apply {
             postTranslate(-centerX, -centerY)
             postScale(scale, scale)
@@ -310,12 +314,23 @@ class PaintView : View {
     }
 
     inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        private val zoomAmount = 0.5f // adjust this to change zoom speed
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             // Scale with constraints. Not too big. Not too small
-            scaleFactor *= detector.scaleFactor
+            scaleFactor += (detector.scaleFactor - 1) * zoomAmount
             scaleFactor = max(0.1f, min(scaleFactor, 10.0f))
             invalidate()
             return true
+        }
+
+        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+            isScaling = true
+            return super.onScaleBegin(detector)
+        }
+
+        override fun onScaleEnd(detector: ScaleGestureDetector) {
+            isScaling = false
+            super.onScaleEnd(detector)
         }
     }
 }
