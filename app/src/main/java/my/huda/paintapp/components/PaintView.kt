@@ -23,6 +23,8 @@ class PaintView : View {
     private var lastTouchY = 0f
     private var translateX = 0f
     private var translateY = 0f
+    private var focusX = 0f
+    private var focusY = 0f
 
     private var initialTouchX = 0f
     private var initialTouchY = 0f
@@ -71,7 +73,7 @@ class PaintView : View {
         // Scale the canvas based on the current scale factor
         canvas.save()
         canvas.translate(translateX, translateY)
-        canvas.scale(scaleFactor, scaleFactor)
+        canvas.scale(scaleFactor, scaleFactor, focusX, focusY)
         for (currentPathIndex in pathList.indices) {
             paintBrush.color = colorList[currentPathIndex]
             paintBrush.strokeWidth = strokeList[currentPathIndex]
@@ -317,6 +319,8 @@ class PaintView : View {
         private val zoomAmount = 0.5f // adjust this to change zoom speed
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             // Scale with constraints. Not too big. Not too small
+            focusX = detector.focusX
+            focusY = detector.focusY
             scaleFactor += (detector.scaleFactor - 1) * zoomAmount
             scaleFactor = max(0.1f, min(scaleFactor, 10.0f))
             invalidate()

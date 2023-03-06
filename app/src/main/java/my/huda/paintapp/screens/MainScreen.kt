@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import my.huda.paintapp.R
 import my.huda.paintapp.components.PaintButton
 import my.huda.paintapp.components.PaintView.Companion.currentBrush
@@ -30,6 +31,7 @@ class MainScreen : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main_screen)
         supportActionBar?.hide()
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
 
         val panel = findViewById<FrameLayout>(R.id.fullPanel)
         val paintTools = panel.findViewById<View>(R.id.paint_tools)
