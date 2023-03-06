@@ -12,6 +12,7 @@ import my.huda.paintapp.R
 import my.huda.paintapp.components.PaintButton
 import my.huda.paintapp.components.PaintView.Companion.currentBrush
 import my.huda.paintapp.components.PaintView.Companion.currentStroke
+import my.huda.paintapp.components.PaintView.Companion.selectedPathIndex
 
 
 class MainScreen : AppCompatActivity() {
@@ -116,6 +117,7 @@ class MainScreen : AppCompatActivity() {
             // do something
             eraserMode = false
             selectMode = false
+            selectedPathIndex = -1
             extendPanel(panel, paintTools, strokeTools, colorTools)
             paintBrush.color = selectedColor
             paintBrush.strokeWidth = selectedStroke
@@ -128,6 +130,7 @@ class MainScreen : AppCompatActivity() {
             isExtended = true
             eraserMode = true
             selectMode = false
+            selectedPathIndex = -1
             extendPanel(panel, paintTools, strokeTools, colorTools)
         }
 
