@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import my.huda.paintapp.R
@@ -132,6 +133,7 @@ class MainScreen : AppCompatActivity() {
         eraserButton.setOnClickListener {
             isExtended = true
             eraserMode = true
+            Toast.makeText(this, "Eraser Mode: True", Toast.LENGTH_SHORT).show()
             selectMode = false
             selectedPathIndex = -1
             extendPanel(panel, paintTools, strokeTools, colorTools)
@@ -140,7 +142,8 @@ class MainScreen : AppCompatActivity() {
         selectButton.setOnClickListener {
             isExtended = true
             eraserMode = false
-            selectMode = true
+            selectMode = !selectMode
+            Toast.makeText(this, "Select Mode: $selectMode", Toast.LENGTH_SHORT).show()
             extendPanel(panel, paintTools, strokeTools, colorTools)
         }
 

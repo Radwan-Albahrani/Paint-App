@@ -14,7 +14,10 @@ import my.huda.paintapp.screens.MainScreen.Companion.selectMode
 import kotlin.math.*
 
 class PaintView : View {
+    // ==================== Variables ====================
     private var scaleGestureDetector: ScaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
+
+    // ============ Canvas Variables ============
     private var scaleFactor = 1.0f
     private var lastTouchX = 0f
     private var lastTouchY = 0f
@@ -23,15 +26,20 @@ class PaintView : View {
     private var focusX = 0f
     private var focusY = 0f
 
+    // ============ Select mode variables ============
     private var initialTouchX = 0f
     private var initialTouchY = 0f
     private var selectedPathBounds = RectF()
     private var selectedPathPaint = Paint()
-    private var isScaling = false
     private var scalingCount = 0
     private val scaleFactorObject = 1.001f
 
+    // ============ Booleans ============
+    private var isScaling = false
+    private var hasBounds = false
 
+
+    // ==================== Companion Object ====================
     companion object{
         var pathList = ArrayList<Path>()
         var colorList = ArrayList<Int>()
@@ -41,6 +49,7 @@ class PaintView : View {
         var selectedPathIndex = -1
     }
 
+    // ==================== Constructors ====================
     constructor(context: Context) : super(context) {
         setupDrawing()
     }
@@ -49,7 +58,7 @@ class PaintView : View {
         setupDrawing()
     }
 
-    // Setting up brushes
+    // ==================== Setup ====================
     private fun setupDrawing() {
         // Paint for selected path
         selectedPathPaint.isAntiAlias = true
@@ -67,7 +76,7 @@ class PaintView : View {
         paintBrush.strokeWidth = currentStroke
     }
 
-    // Drawing on the canvas
+    // ==================== Drawing ====================
     override fun onDraw(canvas: Canvas) {
         // Scale the canvas based on the current scale factor
         canvas.save()
@@ -88,7 +97,11 @@ class PaintView : View {
         invalidate()
     }
 
-    // Handling touch gestures
+    private fun drawSelectedPathBounds(canvas: Canvas) {
+        canvas.drawRect(selectedPathBounds, selectedPathPaint)
+    }
+
+    // ==================== Touch Events ====================
     override fun onTouchEvent(event: MotionEvent): Boolean {
         var touchX = event.x
         var touchY = event.y
@@ -121,6 +134,7 @@ class PaintView : View {
         return false
     }
 
+    // ================== TOUCH EVENT HANDLERS ==================
     // Function to handle the touch down event based on the mode
     private fun onTouchDown(event: MotionEvent, touchX: Float, touchY: Float) : Boolean {
         return if (selectMode) {
@@ -204,30 +218,37 @@ class PaintView : View {
         return true
     }
 
+    // ================== SELECT MODE TOUCH EVENT HANDLERS ==================
     private fun selectModeTouchDown(touchX: Float, touchY: Float): Boolean {
-        if(selectedPathIndex == -1){
-            // Select mode is enabled, check if the touch point is inside any existing path
-            for (i in pathList.indices) {
-                val bounds = RectF()
-                pathList[i].computeBounds(bounds, false)
-                if (bounds.contains(touchX, touchY)) {
-                    // Found a path, store the initial touch point and select it
-                    selectedPathIndex = i
-                    bounds.inset(-bounds.width() / 6, -bounds.height() / 6)
-                    selectedPathBounds = bounds
-                    initialTouchX = touchX
-                    initialTouchY = touchY
-                    return true
-                }
-            }
-        }
-        else
+        if(hasBounds)
         {
             // A path is already selected, check if the touch point is inside the selected path
-            if (selectedPathBounds.contains(touchX, touchY)) {
+            return if (selectedPathBounds.contains(touchX, touchY)) {
                 // The touch point is inside the selected path, store the initial touch point
                 initialTouchX = touchX
                 initialTouchY = touchY
+                true
+            } else{
+                // The touch point is outside the selected path, deselect it
+                selectedPathIndex = -1
+                selectedPathBounds = RectF()
+                hasBounds = false
+                false
+            }
+        }
+
+        // Select mode is enabled, check if the touch point is inside any existing path
+        for (i in pathList.indices) {
+            val bounds = RectF()
+            pathList[i].computeBounds(bounds, false)
+            if (bounds.contains(touchX, touchY)) {
+                // Found a path, store the initial touch point and select it
+                selectedPathIndex = i
+                bounds.inset(-bounds.width() / 6, -bounds.height() / 6)
+                selectedPathBounds = bounds
+                initialTouchX = touchX
+                initialTouchY = touchY
+                hasBounds = true
                 return true
             }
         }
@@ -321,10 +342,6 @@ class PaintView : View {
         selectedPathBounds.offset((distanceX) / scaleFactor, (distanceY) / scaleFactor)
         initialTouchX = touchX
         initialTouchY = touchY
-    }
-
-    private fun drawSelectedPathBounds(canvas: Canvas) {
-        canvas.drawRect(selectedPathBounds, selectedPathPaint)
     }
 
     inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
