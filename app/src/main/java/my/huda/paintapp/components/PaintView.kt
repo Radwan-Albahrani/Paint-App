@@ -72,8 +72,8 @@ class PaintView : View {
     override fun onDraw(canvas: Canvas) {
         // Scale the canvas based on the current scale factor
         canvas.save()
-        canvas.translate(translateX, translateY)
         canvas.scale(scaleFactor, scaleFactor, focusX, focusY)
+        canvas.translate(translateX, translateY)
         for (currentPathIndex in pathList.indices) {
             paintBrush.color = colorList[currentPathIndex]
             paintBrush.strokeWidth = strokeList[currentPathIndex]
@@ -91,8 +91,12 @@ class PaintView : View {
 
     // Handling touch gestures
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val touchX = (event.x - translateX) / scaleFactor
-        val touchY = (event.y - translateY) / scaleFactor
+        var touchX = event.x
+        var touchY = event.y
+        touchX = (touchX - focusX) / scaleFactor + focusX
+        touchY = (touchY - focusY) / scaleFactor + focusY
+        touchX -= translateX
+        touchY -= translateY
         if(!selectMode)
         {
             scaleGestureDetector.onTouchEvent(event)
