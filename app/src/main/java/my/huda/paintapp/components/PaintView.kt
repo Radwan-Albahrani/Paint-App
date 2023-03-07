@@ -145,7 +145,10 @@ class PaintView : View {
             selectedPathBounds = RectF()
             lastTouchX = event.x
             lastTouchY = event.y
+            if(event.pointerCount == 1)
+            {
             path.moveTo(touchX, touchY)
+            }
             true
         }
     }
@@ -201,7 +204,10 @@ class PaintView : View {
             }
             return true
         }
-        path.lineTo(touchX, touchY)
+        if(event.pointerCount == 1)
+        {
+            path.lineTo(touchX, touchY)
+        }
         return true
     }
 
@@ -211,10 +217,13 @@ class PaintView : View {
         if(event.pointerCount >= 2){
             return true
         }
-        pathList.add(path)
-        colorList.add(currentBrush)
-        strokeList.add(currentStroke)
-        path = Path()
+        if(event.pointerCount == 1 && !selectMode && !isScaling)
+        {
+            pathList.add(path)
+            colorList.add(currentBrush)
+            strokeList.add(currentStroke)
+            path = Path()
+        }
         return true
     }
 
