@@ -119,6 +119,10 @@ class PaintView : View {
         }
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
+                if(event.pointerCount > 1 && !selectMode)
+                {
+                    return true
+                }
                 return onTouchDown(event, touchX, touchY)
             }
 
