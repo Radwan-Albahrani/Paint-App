@@ -119,7 +119,7 @@ class PaintView : View {
         }
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                if(event.pointerCount > 1 && !selectMode)
+                if(event.pointerCount > 1 && !selectMode && isScaling)
                 {
                     return true
                 }
@@ -189,7 +189,7 @@ class PaintView : View {
             invalidate()
             return true
         }
-        if(event.pointerCount >= 3){
+        if(event.pointerCount > 1){
             return true
         }
         if(eraserMode)
@@ -370,12 +370,24 @@ class PaintView : View {
         }
 
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+            // check if any thread is running
+            if (isScaling) {
+                return false
+            }
             isScaling = true
             return super.onScaleBegin(detector)
         }
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
-            isScaling = false
+            // start a thread to wait 300 ms then change scaling value
+            Thread(Runnable {
+                try {
+                    Thread.sleep(300)
+                } catch (e: InterruptedException) {
+                    e.printStackTrace()
+                }
+                isScaling = false
+            }).start()
             super.onScaleEnd(detector)
         }
     }
