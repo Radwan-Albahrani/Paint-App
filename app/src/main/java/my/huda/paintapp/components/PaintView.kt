@@ -6,7 +6,6 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
-import androidx.core.graphics.transform
 import my.huda.paintapp.screens.MainScreen.Companion.eraserMode
 import my.huda.paintapp.screens.MainScreen.Companion.paintBrush
 import my.huda.paintapp.screens.MainScreen.Companion.path
@@ -23,8 +22,8 @@ class PaintView : View {
     private var lastTouchY = 0f
     private var translateX = 0f
     private var translateY = 0f
-    private var focusX = 0f
-    private var focusY = 0f
+    private var focusX = 0f;
+    private var focusY = 0f;
 
     // ============ Select mode variables ============
     private var initialTouchX = 0f
@@ -37,11 +36,6 @@ class PaintView : View {
     // ============ Booleans ============
     private var isScaling = false
 
-    // ========= DEBUG =========
-    private var xyTranslateBrush = Paint()
-    private var focusBrush = Paint()
-    private var lastTouchBrush = Paint()
-    private var testTranslateX = 0f;
 
     // ==================== Companion Object ====================
     companion object{
@@ -79,82 +73,59 @@ class PaintView : View {
         paintBrush.style = Paint.Style.STROKE
         paintBrush.strokeJoin = Paint.Join.ROUND
         paintBrush.strokeWidth = currentStroke
-
-        // =============== DEBUG ===============
-        xyTranslateBrush.isAntiAlias = true
-        xyTranslateBrush.color = Color.RED
-        xyTranslateBrush.style = Paint.Style.STROKE
-        xyTranslateBrush.strokeJoin = Paint.Join.ROUND
-        xyTranslateBrush.strokeWidth = 12f
-
-        focusBrush.isAntiAlias = true
-        focusBrush.color = Color.GREEN
-        focusBrush.style = Paint.Style.STROKE
-        focusBrush.strokeJoin = Paint.Join.ROUND
-        focusBrush.strokeWidth = 12f
-
-        lastTouchBrush.isAntiAlias = true
-        lastTouchBrush.color = Color.BLUE
-        lastTouchBrush.style = Paint.Style.STROKE
-        lastTouchBrush.strokeJoin = Paint.Join.ROUND
-        lastTouchBrush.strokeWidth = 12f
-
     }
 
     // ==================== Drawing ====================
     override fun onDraw(canvas: Canvas) {
+        focusX = (super.getWidth() * 0.5f) - translateX
+        focusY = (super.getHeight() * 0.5f) - translateY
         // Scale the canvas based on the current scale factor
-        // =============== DEBUG ===============
-//        canvas.drawCircle(translateX, translateY, 1f * scaleFactor, xyTranslateBrush)
-//        canvas.drawCircle(lastTouchX, lastTouchY, 1f * scaleFactor, lastTouchBrush)
-
         canvas.save()
         canvas.apply {
             translate(translateX, translateY)
-            scale(scaleFactor, scaleFactor, (super.getWidth() * 0.5f) - translateX, (super.getHeight() * 0.5f) - translateY)
+            scale(scaleFactor, scaleFactor, focusX, focusY)
         }
 
-        // =============== DEBUG ===============
-//        canvas.drawCircle(focusX, focusY, 1f * scaleFactor, focusBrush)
-
+        // Draw the paths
         for (currentPathIndex in pathList.indices) {
             paintBrush.color = colorList[currentPathIndex]
             paintBrush.strokeWidth = strokeList[currentPathIndex]
             canvas.drawPath(pathList[currentPathIndex], paintBrush)
         }
+
+        // Draw the selected path if any
         if (selectedPathIndex >= 0) {
             drawSelectedPathBounds(canvas)
         }
 
+        // Draw the path that is currently being drawn
         paintBrush.color = currentBrush
         paintBrush.strokeWidth = currentStroke
         canvas.drawPath(path, paintBrush)
         canvas.restore()
     }
 
+    // simple function to draw the selected path bounds
     private fun drawSelectedPathBounds(canvas: Canvas) {
         canvas.drawRect(selectedPathBounds, selectedPathPaint)
     }
 
     // ==================== Touch Events ====================
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        var touchX = event.x
-        var touchY = event.y
-        touchX = (touchX - ((super.getWidth() * 0.5f) - translateX) - translateX) / scaleFactor + ((super.getWidth() * 0.5f) - translateX)
-        touchY = (touchY - ((super.getHeight() * 0.5f) - translateY) - translateY) / scaleFactor + ((super.getHeight() * 0.5f) - translateY)
+        // Get the touch coordinates based on any applied canvas translations
+        val touchX = (event.x - focusX - translateX) / scaleFactor + focusX
+        val touchY = (event.y - focusY - translateY) / scaleFactor + focusY
         println("touchX: $touchX, touchY: $touchY")
-//        touchX = (touchX - translateX) / 1f
-//        touchY = (touchY - translateY) / 1f
+
+        // If not select mode, allow scaling
         if(!selectMode)
         {
             scaleGestureDetector.onTouchEvent(event)
         }
+
+        // Handle the touch event based on the action
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                if(event.pointerCount > 1 && !selectMode && isScaling)
-                {
-                    return true
-                }
                 return onTouchDown(event, touchX, touchY)
             }
 
@@ -210,6 +181,7 @@ class PaintView : View {
             invalidate()
             return true
         }
+        // Panning the canvas
         if (event.pointerCount == 2 && !selectMode){
             // Two-finger gesture: translate the canvas
             val dx = event.x - lastTouchX
@@ -222,9 +194,12 @@ class PaintView : View {
             invalidate()
             return true
         }
+        // check to not enable any drawing if more than one finger
         if(event.pointerCount > 1){
             return true
         }
+
+        // Eraser mode
         if(eraserMode)
         {
             // find out the path that is being touched
@@ -241,6 +216,8 @@ class PaintView : View {
             }
             return true
         }
+
+        // Allow drawing if pointers are 1 and not scaling
         if(event.pointerCount == 1 && !isScaling)
         {
             path.lineTo(touchX, touchY)
@@ -251,9 +228,12 @@ class PaintView : View {
     // Function to handle removing the finger from the screen
     private fun onTouchUp(event: MotionEvent) : Boolean
     {
+        // Do nothing if touch up is from 2 fingers
         if(event.pointerCount >= 2){
             return true
         }
+
+        // Otherwise, add drawn path to the path list
         if(event.pointerCount == 1 && !selectMode && !isScaling)
         {
             pathList.add(path)
@@ -266,9 +246,10 @@ class PaintView : View {
 
     // ================== SELECT MODE TOUCH EVENT HANDLERS ==================
     private fun selectModeTouchDown(touchX: Float, touchY: Float): Boolean {
+
+        // If bounds are already set, check if the touch point is inside the bounds
         if(hasBounds)
         {
-            // A path is already selected, check if the touch point is inside the selected path
             return if (selectedPathBounds.contains(touchX, touchY)) {
                 // The touch point is inside the selected path, store the initial touch point
                 initialTouchX = touchX
@@ -303,6 +284,7 @@ class PaintView : View {
         return false
     }
 
+    // TODO: Make this actually work
     private fun selectModeScaleAndRotate(
         event: MotionEvent,
         selectedPath: Path,
@@ -376,6 +358,7 @@ class PaintView : View {
     }
 
 
+    // Move the selected path
     private fun selectModeMove(
         touchX: Float,
         touchY: Float,
@@ -390,6 +373,8 @@ class PaintView : View {
         initialTouchY = touchY
     }
 
+    // ================== HELPER FUNCTIONS ==================
+    // Function to scale the canvas, inside the inner class
     inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         private val zoomAmount = 1.5f // adjust this to change zoom speed
         override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -412,25 +397,27 @@ class PaintView : View {
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
             // start a thread to wait 300 ms then change scaling value
-            Thread(Runnable {
+            Thread {
                 try {
                     Thread.sleep(300)
                 } catch (e: InterruptedException) {
                     e.printStackTrace()
                 }
                 isScaling = false
-            }).start()
+            }.start()
             super.onScaleEnd(detector)
         }
     }
 }
 
+// Function to find angle between two points
 fun PointF.angleTo(p: PointF): Float {
     val angle1 = atan2(y, x)
     val angle2 = atan2(p.y - y, p.x - x)
     return angle2 - angle1
 }
 
+// Function to find distance between two points
 fun PointF.distanceTo(other: PointF): Float {
     val dx = other.x - x
     val dy = other.y - y
