@@ -14,6 +14,7 @@ import my.huda.paintapp.R
 import my.huda.paintapp.components.PaintButton
 import my.huda.paintapp.components.PaintView.Companion.currentBrush
 import my.huda.paintapp.components.PaintView.Companion.currentStroke
+import my.huda.paintapp.components.PaintView.Companion.hasBounds
 import my.huda.paintapp.components.PaintView.Companion.selectedPathIndex
 
 
@@ -143,6 +144,11 @@ class MainScreen : AppCompatActivity() {
             isExtended = true
             eraserMode = false
             selectMode = !selectMode
+            if(!selectMode)
+            {
+                selectedPathIndex = -1
+                hasBounds = false
+            }
             Toast.makeText(this, "Select Mode: $selectMode", Toast.LENGTH_SHORT).show()
             extendPanel(panel, paintTools, strokeTools, colorTools)
         }

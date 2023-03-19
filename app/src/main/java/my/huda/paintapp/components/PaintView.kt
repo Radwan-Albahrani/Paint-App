@@ -25,6 +25,8 @@ class PaintView : View {
     private var translateY = 0f
     private var focusX = 0f
     private var focusY = 0f
+    private var lastCenterX = 0f;
+    private var lastCenterY = 0f;
 
     // ============ Select mode variables ============
     private var initialTouchX = 0f
@@ -36,7 +38,7 @@ class PaintView : View {
 
     // ============ Booleans ============
     private var isScaling = false
-    private var hasBounds = false
+
 
 
     // ==================== Companion Object ====================
@@ -47,6 +49,7 @@ class PaintView : View {
         var currentBrush = Color.BLACK
         var currentStroke = 12f
         var selectedPathIndex = -1
+        var hasBounds = false
     }
 
     // ==================== Constructors ====================
@@ -80,8 +83,10 @@ class PaintView : View {
     override fun onDraw(canvas: Canvas) {
         // Scale the canvas based on the current scale factor
         canvas.save()
-        canvas.scale(scaleFactor, scaleFactor, focusX, focusY)
-        canvas.translate(translateX, translateY)
+        canvas.apply {
+            translate(translateX, translateY)
+            scale(scaleFactor, scaleFactor, focusX, focusY)
+        }
         for (currentPathIndex in pathList.indices) {
             paintBrush.color = colorList[currentPathIndex]
             paintBrush.strokeWidth = strokeList[currentPathIndex]
@@ -94,7 +99,6 @@ class PaintView : View {
         paintBrush.strokeWidth = currentStroke
         canvas.drawPath(path, paintBrush)
         canvas.restore()
-        invalidate()
     }
 
     private fun drawSelectedPathBounds(canvas: Canvas) {
@@ -105,17 +109,11 @@ class PaintView : View {
     override fun onTouchEvent(event: MotionEvent): Boolean {
         var touchX = event.x
         var touchY = event.y
-        touchX = (touchX - focusX) / scaleFactor + focusX
-        touchY = (touchY - focusY) / scaleFactor + focusY
-        touchX -= translateX
-        touchY -= translateY
+        touchX = (touchX - focusX - translateX) / scaleFactor + focusX
+        touchY = (touchY - focusY - translateY) / scaleFactor + focusY
         if(!selectMode)
         {
             scaleGestureDetector.onTouchEvent(event)
-        }
-        if(isScaling)
-        {
-            return true
         }
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -151,7 +149,7 @@ class PaintView : View {
             lastTouchY = event.y
             if(event.pointerCount == 1)
             {
-            path.moveTo(touchX, touchY)
+                path.moveTo(touchX, touchY)
             }
             true
         }
@@ -178,14 +176,15 @@ class PaintView : View {
             invalidate()
             return true
         }
-        if (event.pointerCount == 2 && !selectMode && !isScaling){
+        if (event.pointerCount == 2 && !selectMode){
             // Two-finger gesture: translate the canvas
             val dx = event.x - lastTouchX
             val dy = event.y - lastTouchY
+            println("dx: $dx, dy: $dy")
             lastTouchX = event.x
             lastTouchY = event.y
-            translateX += dx / scaleFactor
-            translateY += dy / scaleFactor
+            translateX += dx
+            translateY += dy
             invalidate()
             return true
         }
@@ -208,7 +207,7 @@ class PaintView : View {
             }
             return true
         }
-        if(event.pointerCount == 1)
+        if(event.pointerCount == 1 && !isScaling)
         {
             path.lineTo(touchX, touchY)
         }
@@ -358,13 +357,13 @@ class PaintView : View {
     }
 
     inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-        private val zoomAmount = 0.5f // adjust this to change zoom speed
+        private val zoomAmount = 2.5f // adjust this to change zoom speed
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             // Scale with constraints. Not too big. Not too small
-            focusX = detector.focusX
-            focusY = detector.focusY
+            focusX = detector.focusX - translateX
+            focusY = detector.focusY - translateY
             scaleFactor += (detector.scaleFactor - 1) * zoomAmount
-            scaleFactor = max(0.1f, min(scaleFactor, 10.0f))
+            scaleFactor = max(0.1f, min(scaleFactor, 6.0f))
             invalidate()
             return true
         }
