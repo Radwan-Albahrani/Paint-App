@@ -25,8 +25,6 @@ class PaintView : View {
     private var translateY = 0f
     private var focusX = 0f
     private var focusY = 0f
-    private var lastCenterX = 0f;
-    private var lastCenterY = 0f;
 
     // ============ Select mode variables ============
     private var initialTouchX = 0f
@@ -39,7 +37,11 @@ class PaintView : View {
     // ============ Booleans ============
     private var isScaling = false
 
-
+    // ========= DEBUG =========
+    private var xyTranslateBrush = Paint()
+    private var focusBrush = Paint()
+    private var lastTouchBrush = Paint()
+    private var testTranslateX = 0f;
 
     // ==================== Companion Object ====================
     companion object{
@@ -77,16 +79,44 @@ class PaintView : View {
         paintBrush.style = Paint.Style.STROKE
         paintBrush.strokeJoin = Paint.Join.ROUND
         paintBrush.strokeWidth = currentStroke
+
+        // =============== DEBUG ===============
+        xyTranslateBrush.isAntiAlias = true
+        xyTranslateBrush.color = Color.RED
+        xyTranslateBrush.style = Paint.Style.STROKE
+        xyTranslateBrush.strokeJoin = Paint.Join.ROUND
+        xyTranslateBrush.strokeWidth = 12f
+
+        focusBrush.isAntiAlias = true
+        focusBrush.color = Color.GREEN
+        focusBrush.style = Paint.Style.STROKE
+        focusBrush.strokeJoin = Paint.Join.ROUND
+        focusBrush.strokeWidth = 12f
+
+        lastTouchBrush.isAntiAlias = true
+        lastTouchBrush.color = Color.BLUE
+        lastTouchBrush.style = Paint.Style.STROKE
+        lastTouchBrush.strokeJoin = Paint.Join.ROUND
+        lastTouchBrush.strokeWidth = 12f
+
     }
 
     // ==================== Drawing ====================
     override fun onDraw(canvas: Canvas) {
         // Scale the canvas based on the current scale factor
+        // =============== DEBUG ===============
+//        canvas.drawCircle(translateX, translateY, 1f * scaleFactor, xyTranslateBrush)
+//        canvas.drawCircle(lastTouchX, lastTouchY, 1f * scaleFactor, lastTouchBrush)
+
         canvas.save()
         canvas.apply {
             translate(translateX, translateY)
-            scale(scaleFactor, scaleFactor, focusX, focusY)
+            scale(scaleFactor, scaleFactor, (super.getWidth() * 0.5f) - translateX, (super.getHeight() * 0.5f) - translateY)
         }
+
+        // =============== DEBUG ===============
+//        canvas.drawCircle(focusX, focusY, 1f * scaleFactor, focusBrush)
+
         for (currentPathIndex in pathList.indices) {
             paintBrush.color = colorList[currentPathIndex]
             paintBrush.strokeWidth = strokeList[currentPathIndex]
@@ -95,6 +125,7 @@ class PaintView : View {
         if (selectedPathIndex >= 0) {
             drawSelectedPathBounds(canvas)
         }
+
         paintBrush.color = currentBrush
         paintBrush.strokeWidth = currentStroke
         canvas.drawPath(path, paintBrush)
@@ -109,8 +140,11 @@ class PaintView : View {
     override fun onTouchEvent(event: MotionEvent): Boolean {
         var touchX = event.x
         var touchY = event.y
-        touchX = (touchX - focusX - translateX) / scaleFactor + focusX
-        touchY = (touchY - focusY - translateY) / scaleFactor + focusY
+        touchX = (touchX - ((super.getWidth() * 0.5f) - translateX) - translateX) / scaleFactor + ((super.getWidth() * 0.5f) - translateX)
+        touchY = (touchY - ((super.getHeight() * 0.5f) - translateY) - translateY) / scaleFactor + ((super.getHeight() * 0.5f) - translateY)
+        println("touchX: $touchX, touchY: $touchY")
+//        touchX = (touchX - translateX) / 1f
+//        touchY = (touchY - translateY) / 1f
         if(!selectMode)
         {
             scaleGestureDetector.onTouchEvent(event)
@@ -183,8 +217,8 @@ class PaintView : View {
             println("dx: $dx, dy: $dy")
             lastTouchX = event.x
             lastTouchY = event.y
-            translateX += dx
-            translateY += dy
+            translateX += dx / scaleFactor
+            translateY += dy / scaleFactor
             invalidate()
             return true
         }
@@ -357,13 +391,12 @@ class PaintView : View {
     }
 
     inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-        private val zoomAmount = 2.5f // adjust this to change zoom speed
+        private val zoomAmount = 1.5f // adjust this to change zoom speed
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             // Scale with constraints. Not too big. Not too small
-            focusX = detector.focusX - translateX
-            focusY = detector.focusY - translateY
             scaleFactor += (detector.scaleFactor - 1) * zoomAmount
-            scaleFactor = max(0.1f, min(scaleFactor, 6.0f))
+            scaleFactor = max(0.1f, min(scaleFactor, 10.0f))
+            println("scaleFactor: $scaleFactor")
             invalidate()
             return true
         }
