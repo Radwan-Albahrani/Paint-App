@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import androidx.core.graphics.transform
 import my.huda.paintapp.screens.MainScreen.Companion.eraserMode
 import my.huda.paintapp.screens.MainScreen.Companion.paintBrush
 import my.huda.paintapp.screens.MainScreen.Companion.path
@@ -22,8 +23,8 @@ class PaintView : View {
     private var lastTouchY = 0f
     private var translateX = 0f
     private var translateY = 0f
-    private var focusX = 0f;
-    private var focusY = 0f;
+    private var focusX = 0f
+    private var focusY = 0f
 
     // ============ Select mode variables ============
     private var initialTouchX = 0f
@@ -35,7 +36,6 @@ class PaintView : View {
 
     // ============ Booleans ============
     private var isScaling = false
-
 
     // ==================== Companion Object ====================
     companion object{
@@ -79,6 +79,12 @@ class PaintView : View {
     override fun onDraw(canvas: Canvas) {
         focusX = (super.getWidth() * 0.5f) - translateX
         focusY = (super.getHeight() * 0.5f) - translateY
+
+        // Draw the path that is currently being drawn
+        paintBrush.color = currentBrush
+        paintBrush.strokeWidth = currentStroke * scaleFactor
+        canvas.drawPath(path, paintBrush)
+
         // Scale the canvas based on the current scale factor
         canvas.save()
         canvas.apply {
@@ -92,17 +98,12 @@ class PaintView : View {
             paintBrush.strokeWidth = strokeList[currentPathIndex]
             canvas.drawPath(pathList[currentPathIndex], paintBrush)
         }
+        canvas.restore()
 
         // Draw the selected path if any
         if (selectedPathIndex >= 0) {
             drawSelectedPathBounds(canvas)
         }
-
-        // Draw the path that is currently being drawn
-        paintBrush.color = currentBrush
-        paintBrush.strokeWidth = currentStroke
-        canvas.drawPath(path, paintBrush)
-        canvas.restore()
     }
 
     // simple function to draw the selected path bounds
@@ -113,8 +114,10 @@ class PaintView : View {
     // ==================== Touch Events ====================
     override fun onTouchEvent(event: MotionEvent): Boolean {
         // Get the touch coordinates based on any applied canvas translations
-        val touchX = (event.x - focusX - translateX) / scaleFactor + focusX
-        val touchY = (event.y - focusY - translateY) / scaleFactor + focusY
+//        val touchX = (event.x - focusX - translateX) / scaleFactor + focusX
+//        val touchY = (event.y - focusY - translateY) / scaleFactor + focusY
+        val touchX = event.x
+        val touchY = event.y
         println("touchX: $touchX, touchY: $touchY")
 
         // If not select mode, allow scaling
@@ -152,6 +155,7 @@ class PaintView : View {
             selectedPathBounds = RectF()
             lastTouchX = event.x
             lastTouchY = event.y
+            path = Path()
             if(event.pointerCount == 1)
             {
                 path.moveTo(touchX, touchY)
@@ -205,7 +209,13 @@ class PaintView : View {
             // find out the path that is being touched
             for(currentPathIndex in pathList.indices){
                 val bounds = RectF()
-                pathList[currentPathIndex].computeBounds(bounds, false)
+                pathList[currentPathIndex].computeBounds(bounds, true)
+
+                bounds.apply {
+                    transform(Matrix().apply { postScale(scaleFactor, scaleFactor, focusX, focusY) })
+                    offset(translateX, translateY)
+                }
+                println("bounds: $bounds")
 
                 if(bounds.contains(touchX, touchY)){
                     pathList.removeAt(currentPathIndex)
@@ -218,7 +228,7 @@ class PaintView : View {
         }
 
         // Allow drawing if pointers are 1 and not scaling
-        if(event.pointerCount == 1 && !isScaling)
+        if(event.pointerCount == 1 && !isScaling && !eraserMode && !selectMode)
         {
             path.lineTo(touchX, touchY)
         }
@@ -234,8 +244,14 @@ class PaintView : View {
         }
 
         // Otherwise, add drawn path to the path list
-        if(event.pointerCount == 1 && !selectMode && !isScaling)
+        if(event.pointerCount == 1 && !selectMode && !isScaling && !eraserMode)
         {
+            path.apply {
+                offset(-translateX, -translateY)
+                transform(Matrix().apply {
+                    postScale(1 / scaleFactor, 1 / scaleFactor, focusX, focusY)
+                })
+            }
             pathList.add(path)
             colorList.add(currentBrush)
             strokeList.add(currentStroke)
@@ -268,6 +284,10 @@ class PaintView : View {
         for (i in pathList.indices) {
             val bounds = RectF()
             pathList[i].computeBounds(bounds, false)
+            bounds.apply {
+                transform(Matrix().apply { postScale(scaleFactor, scaleFactor, focusX, focusY) })
+                offset(translateX, translateY)
+            }
             if (bounds.contains(touchX, touchY)) {
                 // Found a path, store the initial touch point and select it
                 selectedPathIndex = i
@@ -351,8 +371,12 @@ class PaintView : View {
             postTranslate(centerX, centerY)
         })
         val bounds = RectF()
-        pathList[selectedPathIndex].computeBounds(bounds, false)
+        selectedPath.computeBounds(bounds, false)
         bounds.inset(-bounds.width() / 6, -bounds.height() / 6)
+        bounds.apply {
+            transform(Matrix().apply { postScale(scaleFactor, scaleFactor, focusX, focusY) })
+            offset(translateX, translateY)
+        }
         selectedPathBounds = bounds
 
     }
@@ -368,7 +392,15 @@ class PaintView : View {
         val distanceX = touchX - initialTouchX
         val distanceY = touchY - initialTouchY
         selectedPath.offset(distanceX / scaleFactor, distanceY / scaleFactor)
-        selectedPathBounds.offset((distanceX) / scaleFactor, (distanceY) / scaleFactor)
+        val bounds = RectF()
+        selectedPath.computeBounds(bounds, false)
+        bounds.inset(-bounds.width() / 6, -bounds.height() / 6)
+        bounds.apply {
+            transform(Matrix().apply { postScale(scaleFactor, scaleFactor, focusX, focusY) })
+            offset(translateX, translateY)
+        }
+        selectedPathBounds = bounds
+
         initialTouchX = touchX
         initialTouchY = touchY
     }
